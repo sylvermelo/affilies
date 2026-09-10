@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Affiliés — Pronos Foot</title>
+<meta name="description" content="Espace affilié Pronos Foot : partagez votre lien, suivez vos inscrits et vos gains.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f131c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="assets/icons-192.png">
+<link rel="icon" type="image/png" href="assets/icons-192.png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --fond:#0f131c; --fond2:#181b25; --fond3:#262a34;
+    --texte:#dfe2ef; --texte2:#bbc9cd; --texte3:#859397;
+    --primaire:#8aebff; --vert:#4ae176; --rouge:#ffb4ab; --or:#ffd166;
+    --bord:#31353f;
+  }
+  *{box-sizing:border-box}
+  html{background:#0a0e17}
+  body{
+    margin:0; background:var(--fond); color:var(--texte);
+    font-family:Inter,system-ui,sans-serif; font-size:14px; line-height:1.5;
+    min-height:100vh; padding-bottom:env(safe-area-inset-bottom,0px);
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (min-width:640px){ body{max-width:560px;margin:0 auto;box-shadow:0 0 60px rgba(0,0,0,.6);} }
+  ::-webkit-scrollbar{display:none}
+  header{
+    position:sticky; top:0; z-index:50; display:flex; align-items:center; gap:10px;
+    padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;
+    background:rgba(15,19,28,.92); backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--bord);
+  }
+  header img{height:32px}
+  header .titre{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--primaire)}
+  header .sous{font-size:11px;color:var(--texte3)}
+  main{padding:20px 16px 60px; display:flex; flex-direction:column; gap:16px}
+  .carte{background:var(--fond2); border:1px solid var(--bord); border-radius:12px; padding:16px}
+  .carte h2{margin:0 0 4px; font-size:15px; font-weight:700}
+  .carte .hint{margin:0 0 12px; font-size:12px; color:var(--texte3)}
+  label{display:block; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--texte3); margin:10px 0 4px}
+  input{
+    width:100%; background:var(--fond); border:1px solid var(--bord); color:var(--texte);
+    border-radius:10px; padding:11px 12px; font-size:14px; outline:none; font-family:inherit;
+  }
+  input:focus{border-color:var(--primaire)}
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%;
+    background:var(--primaire); color:#00363e; border:none; border-radius:10px;
+    padding:12px; font-size:14px; font-weight:700; cursor:pointer; margin-top:14px; font-family:inherit;
+  }
+  .btn:disabled{opacity:.5;cursor:wait}
+  .btn.secondaire{background:var(--fond3); color:var(--texte)}
+  .btn.vert{background:var(--vert); color:#004119}
+  .btn.petit{width:auto; padding:8px 12px; font-size:12px; margin-top:0}
+  .msg{font-size:12px; margin-top:10px; min-height:16px; color:var(--texte2)}
+  .msg.erreur{color:var(--rouge)} .msg.ok{color:var(--vert)}
+  .grille{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .stat{background:var(--fond); border:1px solid var(--bord); border-radius:10px; padding:12px}
+  .stat .n{font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; color:var(--primaire)}
+  .stat .l{font-size:11px; color:var(--texte3); text-transform:uppercase; letter-spacing:.06em; margin-top:2px}
+  .stat.vert .n{color:var(--vert)} .stat.or .n{color:var(--or)}
+  .codeaff{
+    font-family:'JetBrains Mono',monospace; font-size:26px; font-weight:700; letter-spacing:.14em;
+    color:var(--vert); text-align:center; padding:12px; background:var(--fond);
+    border:1px dashed var(--vert); border-radius:10px; margin:8px 0;
+  }
+  .lien{font-size:11px; color:var(--texte2); word-break:break-all; background:var(--fond); border:1px solid var(--bord); border-radius:8px; padding:8px 10px}
+  .lignes{display:flex; flex-direction:column; gap:8px; margin-top:10px}
+  .ligne{display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--fond); border:1px solid var(--bord); border-radius:10px; padding:10px 12px; font-size:13px}
+  .badge{font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:3px 8px; border-radius:999px}
+  .badge.actif{background:rgba(74,225,118,.15); color:var(--vert)}
+  .badge.inactif{background:rgba(255,180,171,.12); color:var(--rouge)}
+  .badge.attente{background:rgba(255,209,102,.14); color:var(--or)}
+  .badge.paye{background:rgba(138,235,255,.12); color:var(--primaire)}
+  .tabs{display:flex; gap:8px; margin-bottom:4px}
+  .tabs button{flex:1; background:var(--fond3); color:var(--texte2); border:none; border-radius:10px; padding:10px; font-weight:600; font-size:13px; cursor:pointer; font-family:inherit}
+  .tabs button.on{background:var(--primaire); color:#00363e}
+  .vide{text-align:center; color:var(--texte3); font-size:13px; padding:18px 0}
+  footer{padding:0 16px 40px; font-size:11px; color:var(--texte3); text-align:center}
+  footer a{color:var(--texte2)}
+  .btn-quitter{background:none;border:none;color:var(--texte3);font-size:12px;cursor:pointer;text-decoration:underline;margin-top:18px;font-family:inherit}
+</style>
+</head>
+<body>
+<header>
+  <img src="assets/logo.png" alt="Pronos Foot">
+  <div>
+    <div class="titre">Pronos Foot · Affiliés</div>
+    <div class="sous">Partagez · Suivez · Gagnez</div>
+  </div>
+</header>
+
+<main>
+  <!-- ========================= AUTH ========================= -->
+  <section id="view-auth" class="carte" style="display:none">
+    <div class="tabs">
+      <button id="tab-connexion" class="on" type="button">Connexion</button>
+      <button id="tab-inscription" type="button">Créer mon compte</button>
+    </div>
+
+    <div id="pane-connexion">
+      <h2>Bon retour 👋</h2>
+      <p class="hint">Connectez-vous avec votre e-mail et votre mot de passe.</p>
+      <label for="c-email">E-mail</label>
+      <input id="c-email" type="email" autocomplete="email" placeholder="vous@exemple.com">
+      <label for="c-mdp">Mot de passe</label>
+      <input id="c-mdp" type="password" autocomplete="current-password" placeholder="••••••••">
+      <button id="c-btn" class="btn" type="button">Se connecter</button>
+      <div id="c-msg" class="msg"></div>
+      <button id="c-oubli" class="btn-quitter" type="button">Mot de passe oublié ?</button>
+    </div>
+
+    <div id="pane-inscription" style="display:none">
+      <h2>Devenir affilié</h2>
+      <p class="hint">Vous recevrez un code et un lien uniques. Votre compte est activé après validation du propriétaire.</p>
+      <label for="i-prenom">Prénom</label>
+      <input id="i-prenom" type="text" autocomplete="given-name" placeholder="Ex. Kossi">
+      <label for="i-nom">Nom</label>
+      <input id="i-nom" type="text" autocomplete="family-name" placeholder="Ex. Adjovi">
+      <label for="i-tel">Numéro Mobile Money (pour vos gains)</label>
+      <input id="i-tel" type="tel" autocomplete="tel" placeholder="Ex. 97 00 00 00">
+      <label for="i-email">E-mail</label>
+      <input id="i-email" type="email" autocomplete="email" placeholder="vous@exemple.com">
+      <label for="i-mdp">Mot de passe (6 caractères min.)</label>
+      <input id="i-mdp" type="password" autocomplete="new-password" placeholder="••••••••">
+      <button id="i-btn" class="btn" type="button">Créer mon compte affilié</button>
+      <div id="i-msg" class="msg"></div>
+    </div>
+  </section>
+
+  <!-- ========================= EN ATTENTE ========================= -->
+  <section id="view-attente" class="carte" style="display:none">
+    <h2>Compte en attente de validation ⏳</h2>
+    <p class="hint" id="a-texte">Le propriétaire doit approuver votre compte. Vous recevrez rien à faire : reconnectez-vous plus tard, cette page se mettra à jour.</p>
+    <div class="codeaff" id="a-code">PF-•••••</div>
+    <p class="hint" style="text-align:center">Votre code affilié (valide après approbation)</p>
+    <button id="a-quitter" class="btn secondaire" type="button">Se déconnecter</button>
+  </section>
+
+  <!-- ========================= TABLEAU DE BORD ========================= -->
+  <section id="view-dash" style="display:none">
+    <div class="carte">
+      <h2 id="d-bonjour">Bonjour</h2>
+      <p class="hint">Votre code et votre lien de parrainage — partagez-les partout.</p>
+      <div class="codeaff" id="d-code">PF-•••••</div>
+      <div class="lien" id="d-lien">…</div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button id="d-copier-code" class="btn secondaire petit" type="button" style="flex:1">Copier le code</button>
+        <button id="d-copier-lien" class="btn secondaire petit" type="button" style="flex:1">Copier le lien</button>
+      </div>
+      <a id="d-whatsapp" class="btn vert" target="_blank" rel="noopener" style="text-decoration:none">Partager sur WhatsApp</a>
+      <div id="d-msg" class="msg"></div>
+    </div>
+
+    <div class="grille">
+      <div class="stat"><div class="n" id="s-inscrits">–</div><div class="l">Inscrits via moi</div></div>
+      <div class="stat vert"><div class="n" id="s-actifs">–</div><div class="l">Abonnements actifs</div></div>
+      <div class="stat"><div class="n" id="s-inactifs">–</div><div class="l">Inactifs</div></div>
+      <div class="stat or"><div class="n" id="s-dus">–</div><div class="l">Gains dus (F)</div></div>
+      <div class="stat"><div class="n" id="s-payes">–</div><div class="l">Déjà payés (F)</div></div>
+      <div class="stat"><div class="n" id="s-detail">–</div><div class="l">1res / renouv.</div></div>
+    </div>
+
+    <div class="carte">
+      <h2>Mes filleuls</h2>
+      <p class="hint" id="h-palier">Identités masquées — vous voyez uniquement les statuts. Paiement des gains : à partir de 2 500 F cumulés, vérifié chaque semaine.</p>
+      <div class="lignes" id="d-filleuls"></div>
+    </div>
+
+    <div class="carte">
+      <h2>Mes derniers gains</h2>
+      <div class="lignes" id="d-historique"></div>
+    </div>
+
+    <div class="carte">
+      <h2>Mon numéro Mobile Money</h2>
+      <p class="hint">Utilisé pour vous payer. Modifiez-le si besoin.</p>
+      <label for="d-tel">Numéro</label>
+      <input id="d-tel" type="tel" placeholder="Ex. 97 00 00 00">
+      <button id="d-tel-btn" class="btn secondaire" type="button">Enregistrer</button>
+      <div id="d-tel-msg" class="msg"></div>
+    </div>
+
+    <div style="text-align:center"><button id="d-quitter" class="btn-quitter" type="button">Se déconnecter</button></div>
+  </section>
+
+  <!-- ========================= OPÉRATEUR ========================= -->
+  <section id="view-admin" style="display:none">
+    <div class="carte">
+      <h2>Demandes en attente</h2>
+      <p class="hint">Approuvez pour activer le code de l'affilié.</p>
+      <div class="lignes" id="o-attente"></div>
+    </div>
+    <!-- ===== Tarifs & promotion (dynamique — demande utilisateur 10/09) ===== -->
+    <div class="carte">
+      <h2>Tarifs &amp; promotion</h2>
+      <p class="hint">Aucun prix n'est codé en dur : tout se modifie ici. Les changements
+        s'appliquent immédiatement à la page de paiement de la vitrine, au message de
+        partage des affiliés et au calcul des gains.</p>
+      <label for="t-prix">Prix de l'abonnement (FCFA / 30 jours)</label>
+      <input id="t-prix" type="number" min="0" step="50" placeholder="2500">
+      <div style="border:1px dashed var(--or);border-radius:10px;padding:10px 12px;margin-top:12px">
+        <label style="margin-top:0;display:flex;align-items:center;gap:8px;text-transform:none;font-size:13px;letter-spacing:0;color:var(--texte)">
+          <input id="t-promo-on" type="checkbox" style="width:auto"> <b>Période de promotion active</b></label>
+        <p class="hint" style="margin:6px 0 0">Si active, la vitrine affiche le prix promo,
+          l'ancien prix barré et la date de fin — automatiquement.</p>
+        <div class="grille" style="margin-top:8px">
+          <div><label for="t-promo-prix">Prix promo (FCFA)</label>
+            <input id="t-promo-prix" type="number" min="0" step="50" placeholder="1500"></div>
+          <div><label for="t-promo-date">Jusqu'au (inclus)</label>
+            <input id="t-promo-date" type="date"></div>
+        </div>
+      </div>
+      <label>Barème des affiliés (FCFA)</label>
+      <div class="grille">
+        <div><label for="t-reduc">Réduction filleul</label>
+          <input id="t-reduc" type="number" min="0" step="50" placeholder="500"></div>
+        <div><label for="t-seuil">Seuil de paiement des gains</label>
+          <input id="t-seuil" type="number" min="0" step="50" placeholder="2500"></div>
+        <div><label for="t-c1">Commission 1re activation</label>
+          <input id="t-c1" type="number" min="0" step="50" placeholder="1000"></div>
+        <div><label for="t-c2">Commission renouvellement</label>
+          <input id="t-c2" type="number" min="0" step="50" placeholder="500"></div>
+      </div>
+      <button id="t-save" class="btn" type="button">Enregistrer les tarifs</button>
+      <div id="t-msg" class="msg"></div>
+    </div>
+    <div class="carte">
+      <h2>Tous les affiliés</h2>
+      <p class="hint" id="h-palier-admin">Gains dus ≥ 2 500 F → payez par MoMo puis « Marquer payé ».</p>
+      <div class="lignes" id="o-tous" style="max-height:none"></div>
+      <button id="o-rafraichir" class="btn secondaire" type="button">Rafraîchir</button>
+    </div>
+    <div style="text-align:center"><button id="o-quitter" class="btn-quitter" type="button">Se déconnecter</button></div>
+  </section>
+
+  <!-- ========================= ERREUR SQL ========================= -->
+  <section id="view-erreur" class="carte" style="display:none">
+    <h2>Espace pas encore activé ⚠️</h2>
+    <p class="hint">La base de données ne connaît pas encore les fonctions affiliés. Il faut coller le script <b>affilies.sql</b> dans Supabase → SQL Editor → Run. (Message réservé au propriétaire — les affiliés ne verront cette page qu'avant l'activation.)</p>
+    <button id="e-quitter" class="btn secondaire" type="button">Se déconnecter</button>
+  </section>
+</main>
+
+<footer>
+  Pronos Foot — service d'analyse et de conseils sportifs. Ne pas parier · 18+ ·
+  Aucun gain garanti. <a id="f-whatsapp" href="#" target="_blank" rel="noopener">Aide WhatsApp</a>
+</footer>
+
+<script src="assets/config.js"></script>
+<script src="assets/app.js"></script>
+<script>if("serviceWorker" in navigator)window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});</script>
+</body>
+</html>
